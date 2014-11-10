@@ -1,0 +1,54 @@
+<Beam Name="Poutre1" >
+
+<DIMENSIONS>
+   Left : 0.0 , 0.0 , 0.0 ;#Coords of the beginning of the beam (m)
+   Right : 0.3 , 0.0 , 0.0 ;#Coords of the end of the beam (m)
+   E = 210000000000.0 ;#Young modulus (Pa)
+   Nu = 0.3 ;#Fish coefficient
+   S = 0.005 ;#Section(m^2)
+   Iy = 0.000000000002 ;#Quadratic moment (m^4)
+   Iz = 0.000000000002 ;#Quadratic moment (m^4)
+   Rho = 7800 ; #Volumic mass (kg.m-3)
+   n = 4 ;#nb of elements between 2 sides of the beam
+</DIMENSIONS>
+
+<BOUNDARIES> #boundaries conditions for displacement
+   <Left>
+
+   </Left>
+   <Right>
+      Ux = 0.0 ;   #totally encastred
+      Uy = 0.0 ;
+      Uz = 0.0 ;
+      Theta_x = 0.0 ; #0.0 + 0.0 = the head of toto
+      Theta_y = 0.0 ;
+      Theta_z = 0.0 ;
+   </Right>
+</BOUNDARIES>
+
+<LOADING> #efforts on the beam
+   <Left> #ponctual effort on the left
+
+   </Left>
+   <Right> #ponctual effort on the right
+
+   </Right>
+   <Lineic> #Lineic effort
+      fy = 1.0 ;
+   </Lineic>
+</LOADING>
+
+</BEAM>
+
+<SOLVER>
+
+   Type = static;
+   Output_name = result21;
+
+   <OUTPUT>
+       Beam = Poutre1 ;
+       U = Ux Uy Uz Theta_x Theta_y Theta_z ;
+       F = Ux ;
+   </OUTPUT>
+
+</SOLVER>

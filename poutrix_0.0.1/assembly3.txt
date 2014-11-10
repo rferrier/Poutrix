@@ -1,0 +1,96 @@
+<Beam Name="Poutre1" >
+
+ <DIMENSIONS>
+  Left : 0.0 , 0.0 , 0.0 ;#Coords of the beginning of the beam (m)
+  Right : 0.3 , 0.0 , 0.0 ;#Coords of the end of the beam (m)
+  E = 210000000000.0 ;#Young modulus (Pa)
+  Nu = 0.3 ;#Fish coefficient
+  S = 0.0001 ;#Section(m^2)
+  Iy = 0.00000000001 ;#Quadratic moment (m^4)
+  Iz = 0.000000000001 ;#Quadratic moment (m^4)
+  Rho = 7800 ; #Volumic mass (kg.m-3)
+  n = 10 ;#nb of elements between 2 sides of the beam
+ </DIMENSIONS>
+
+ <BOUNDARIES> #boundaries conditions for displacement
+  <Left>
+   Ux = 0.0 ;
+   Uy = 0.0 ;
+   Uz = 0.0 ;
+   Theta_x = 0.0 ;
+   Theta_y = 0.0 ;
+   Theta_z = 0.0 ;
+  </Left>
+  <Right>
+
+  </Right>
+ </BOUNDARIES>
+
+ <LOADING> #efforts on the beam
+  <Left> #ponctual effort on the left
+
+  </Left>
+  <Right> #ponctual effort on the right
+   #Ux = 1.0 ;
+   #Uy = 1.0 ;
+  </Right>
+  <Lineic> #Lineic effort
+   #fx = 1.0 ;
+   </Lineic>
+ </LOADING>
+
+</BEAM>
+
+
+<Beam Name="Poutre2" >
+
+ <DIMENSIONS>
+  Left : 0.3 , 0.0 , 0.0 ;#Coords of the beginning of the beam (m)
+  Right : 0.6 , 0.0 , 0.0 ;#Coords of the end of the beam (m)
+  E = 210000000000.0 ;#Young modulus (Pa)
+  Nu = 0.3 ;#Fish coefficient
+  S = 0.001 ;#Section(m^2)
+  Iy = 0.00000000001 ;#Quadratic moment (m^4)
+  Iz = 0.00000000001 ;#Quadratic moment (m^4)
+  Rho = 7800 ; #Volumic mass (kg.m-3)
+  n = 10 ;#nb of elements between 2 sides of the beam
+ </DIMENSIONS>
+
+ <BOUNDARIES> #boundaries conditions for displacement
+  <Left>
+
+  </Left>
+  <Right>
+
+  </Right>
+ </BOUNDARIES>
+
+ <LOADING> #efforts on the beam
+  <Left> #ponctual effort on the left
+
+  </Left>
+  <Right> #ponctual effort on the right
+   Uy = 1.0 ;
+  </Right>
+  <Lineic> #Lineic effort
+
+  </Lineic>
+ </LOADING>
+
+</BEAM>
+
+<LINK>
+
+ Beam1 = Poutre1 ; #1st beam
+ X = 0.3 ; #curvilign absciss on beam 1
+ Beam2 = Poutre2 ; #2nd beam
+ X = 0.0 ;
+
+</LINK>
+
+<SOLVER>
+
+ Type = static;
+ Output_name = result3;
+
+</SOLVER>
