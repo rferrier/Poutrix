@@ -1,0 +1,329 @@
+<Beam Name="Poutre1" >
+
+ <DIMENSIONS>
+  Left : 0.0 , 0.0 , 0.0 ;
+  Right : 100 , 0.0 , 0.0 ;
+  E = E1 ;
+  Nu = Nu1 ;
+  S = 3.14159*D1**2/4 ;
+  Iy = 3.14159*D1**4/64 ;
+  Iz = 3.14159*D1**4/64 ;
+  Rho = 7800 ;
+  n = 3 ;
+ </DIMENSIONS>
+
+ <BOUNDARIES> #boundaries conditions for displacement
+  <Left>
+   Ux = 0.0 ;
+   Uy = 0.0 ;
+   Uz = 0.0 ;
+   Theta_x = 0.0 ;
+   Theta_y = 0.0 ;
+   Theta_z = 0.0 ;
+  </Left>
+  <Right>
+
+  </Right>
+ </BOUNDARIES>
+
+ <LOADING> 
+  <Left> 
+
+  </Left>
+  <Right>
+
+  </Right>
+  <Lineic> 
+
+   </Lineic>
+ </LOADING>
+
+</BEAM>
+
+
+<Beam Name="Poutre2" >
+
+ <DIMENSIONS>
+  Left :  50 , mh.sqrt(3)/2*100 , 0.0 ;
+  Right : 150 , mh.sqrt(3)/2*100 , 0.0 ;
+  E = E1 ;
+  Nu = Nu1 ;
+  S = 3.14159*D1**2/4 ;
+  Iy = 3.14159*D1**4/64 ;
+  Iz = 3.14159*D1**4/64 ;
+  Rho = 7800 ;
+  n = 3 ;
+ </DIMENSIONS>
+
+ <BOUNDARIES> #boundaries conditions for displacement
+  <Left>
+   Ux = 0.0 ;
+   Uy = 0.0 ;
+   Uz = 0.0 ;
+   Theta_x = 0.0 ;
+   Theta_y = 0.0 ;
+   Theta_z = 0.0 ;
+  </Left>
+  <Right>
+
+  </Right>
+ </BOUNDARIES>
+
+ <LOADING> 
+  <Left> 
+
+  </Left>
+  <Right>
+
+  </Right>
+  <Lineic> 
+
+   </Lineic>
+ </LOADING>
+
+</BEAM>
+
+<Beam Name="Poutre3" >
+
+ <DIMENSIONS>
+  Left :  100 , 0 , 0.0 ;
+  Right : 200 , 0 , 0.0 ;
+  E = E1 ;
+  Nu = Nu1 ;
+  S = 3.14159*D1**2/4 ;
+  Iy = 3.14159*D1**4/64 ;
+  Iz = 3.14159*D1**4/64 ;
+  Rho = 7800 ;
+  n = 3 ;
+ </DIMENSIONS>
+
+ <BOUNDARIES> #boundaries conditions for displacement
+  <Left>
+
+  </Left>
+  <Right>
+
+  </Right>
+ </BOUNDARIES>
+
+ <LOADING> 
+  <Left> 
+
+  </Left>
+  <Right>
+    Uy = 1 ;
+  </Right>
+  <Lineic> 
+
+  </Lineic>
+ </LOADING>
+
+</BEAM>
+
+
+<Beam Name="Poutre4" >
+
+ <DIMENSIONS>
+  Left :  50 , mh.sqrt(3)/2*100 , 0.0 ;
+  Right :  100 , 0 , 0.0 ;
+  E = E1 ;
+  Nu = Nu1 ;
+  S = 3.14159*D1**2/4 ;
+  Iy = 3.14159*D1**4/64 ;
+  Iz = 3.14159*D1**4/64 ;
+  Rho = 7800 ;
+  n = 3 ;
+ </DIMENSIONS>
+
+ <BOUNDARIES>
+  <Left>
+   Ux = 0.0 ;
+   Uy = 0.0 ;
+   Uz = 0.0 ;
+   Theta_x = 0.0 ;
+   Theta_y = 0.0 ;
+   Theta_z = 0.0 ;
+  </Left>
+  <Right>
+
+  </Right>
+ </BOUNDARIES>
+
+ <LOADING> 
+  <Left> 
+
+  </Left>
+  <Right>
+
+  </Right>
+  <Lineic> 
+
+  </Lineic>
+ </LOADING>
+
+</BEAM>
+
+
+<Beam Name="Poutre5" >
+
+ <DIMENSIONS>
+  Left :  100 , 0 , 0.0 ;
+  Right :  150 , mh.sqrt(3)/2*100 , 0.0 ;
+  E = E1 ;
+  Nu = Nu1 ;
+  S = 3.14159*D1**2/4 ;
+  Iy = 3.14159*D1**4/64 ;
+  Iz = 3.14159*D1**4/64 ;
+  Rho = 7800 ;
+  n = 3 ;
+ </DIMENSIONS>
+
+ <BOUNDARIES>
+  <Left>
+
+  </Left>
+  <Right>
+
+  </Right>
+ </BOUNDARIES>
+
+ <LOADING> 
+  <Left> 
+
+  </Left>
+  <Right>
+
+  </Right>
+  <Lineic> 
+
+  </Lineic>
+ </LOADING>
+
+</BEAM>
+
+
+<Beam Name="Poutre6" >
+
+ <DIMENSIONS>
+  Left :  150 , mh.sqrt(3)/2*100 , 0.0 ;
+  Right :  200 , 0 , 0.0 ;
+  E = E1 ;
+  Nu = Nu1 ;
+  S = 3.14159*D1**2/4 ;
+  Iy = 3.14159*D1**4/64 ;
+  Iz = 3.14159*D1**4/64 ;
+  Rho = 7800 ;
+  n = 3 ;
+ </DIMENSIONS>
+
+ <BOUNDARIES>
+  <Left>
+
+  </Left>
+  <Right>
+
+  </Right>
+ </BOUNDARIES>
+
+ <LOADING> 
+  <Left> 
+
+  </Left>
+  <Right>
+
+  </Right>
+  <Lineic> 
+
+  </Lineic>
+ </LOADING>
+
+</BEAM>
+
+
+<LINK>
+
+ Beam1 = Poutre1 ; 
+ X = 100 ; 
+ Beam2 = Poutre3 ;
+ X = 0 ;
+ Type = piv ;
+
+</LINK>
+
+<LINK>
+
+ Beam1 = Poutre1 ; 
+ X = 100 ; 
+ Beam2 = Poutre4 ;
+ X = 100 ;
+ Type = enca ;
+
+</LINK>
+
+<LINK>
+
+ Beam1 = Poutre1 ; 
+ X = 100 ; 
+ Beam2 = Poutre5 ;
+ X = 0 ;
+ Type = enca ;
+
+</LINK>
+
+<LINK>
+
+ Beam1 = Poutre2 ; 
+ X = 100 ; 
+ Beam2 = Poutre5 ;
+ X = 100 ;
+ Type = enca ;
+
+</LINK>
+
+<LINK>
+
+ Beam1 = Poutre3 ; 
+ X = 100 ; 
+ Beam2 = Poutre6 ;
+ X = 100 ;
+ Type = enca ;
+
+</LINK>
+
+<LINK>
+
+ Beam1 = Poutre2 ; 
+ X = 100 ; 
+ Beam2 = Poutre6 ;
+ X = 0 ;
+ Type = enca ;
+
+</LINK>
+
+<SOLVER>
+
+ Type = static;
+ Output_name = result1;
+
+   <OUTPUT>
+       Beam = Poutre1 ;
+       U = Uy  Theta_z ;
+       F = Uy ;
+   </OUTPUT>
+
+   <OUTPUT>
+       Beam = Poutre3 ;
+       U = Uy  Theta_z ;
+       F = Uy ;
+   </OUTPUT>
+   
+</SOLVER>
+
+<PARAMETERS>
+
+E1 = 210000 ;
+Nu1 = 0.3;
+L1 = 100 ;
+D1 = 10 ;
+
+</PARAMETERS>

@@ -1,0 +1,82 @@
+<Nom Poutre="Ressort" >
+
+<DIMENSIONS>
+   Gauche : 0.0 , 0.0 , 0.0 ;#Coordonnées du point de début de la poutre(mm)
+   Droite : Th1 , 0.0 , 0.0 ;#Coordonnées du point de fin de la poutre (mm)
+   E = 210000 ;#Module d Young (MPa)
+   Nu = 0.3 ;#Coefficient de Poisson
+   S = 3.1415926535*D1**2/4 ;#Section(mm^2)
+   Iy = 3.1415926535*D1**4/64 ;#Moment quadratique (mm^4)
+   Iz = 3.1415926535*D1**4/64 ;
+   Rho = 7800*10**(-9) ; #Masse volumique (kg.mm-3)
+   n = 100 ;#nombre d éléments entre 2 points remarquables de la poutre
+
+   <Defo_init>
+      Ux = -X+R0*mh.cos(X) ;
+      Uy = R0*mh.sin(X) ;
+	  Uz = Z0*X ;
+  </Defo_init>
+
+</DIMENSIONS>
+
+<LIMITES> #conditions limites en déplacement
+   <Gauche>
+      Ux = 0.0 ;   #totalement encastré
+      Uy = 0.0 ;
+      Uz = 0.0 ;
+      Theta_x = 0.0 ;
+      Theta_y = 0.0 ;
+      Theta_z = 0.0 ;
+   </Gauche>
+   <Droite>
+
+   </Droite>
+</LIMITES>
+
+<CHARGEMENT> #efforts sur la poutre
+   <Gauche> #effort ponctuel à gauche
+
+   </Gauche>
+   <Droite> 
+      #Uy = F0 ;
+	  #Theta_y = F0*R0;
+	  Theta_z = M0;
+   </Droite>
+   <Lineique> #effort linéique
+
+   </Lineique>
+</CHARGEMENT>
+
+</POUTRE>
+
+<SOLVEUR>
+
+   Type = statique;
+   Nom_sortie = ressortTort;
+
+   <SORTIE>
+       Poutre = Ressort ;
+       U = Theta_z ;
+       F = ;
+   </SORTIE>
+
+   #<SORTIE_AFFI>
+    #  Poutre = Ressort ;
+     # Coord = X Y Z ;
+      #U = Uz  ;
+      #F = ;
+      #Sep = ; ;
+   #</SORTIE_AFFI>
+
+</SOLVEUR>
+
+<PARAMETRES>
+
+   Th1 = 3*3.14159 ;
+   R0 = 4.25;
+   D1 = 2.5;
+   Z0 = 2.5/2/3.14159;
+   F0 = 1000.0;
+   M0 = 1.0;
+
+</PARAMETRES>

@@ -1,0 +1,78 @@
+<Nom Poutre="Poutre1" >
+
+<DIMENSIONS>
+   Gauche : 0.0 , 0.0 , 0.0 ;#Coordonnées du point de début de la poutre(mm)
+   Droite : Th1 , 0.0 , 0.0 ;#Coordonnées du point de fin de la poutre (mm)
+   E = 210000 ;#Module d Young (MPa)
+   Nu = 0.3 ;#Coefficient de Poisson
+   S = B1*H1 ;#Section(mm^2)
+   Iy = B1*H1**3/12 ;#Moment quadratique (mm^4)
+   Iz = H1*B1**3/12 ;
+   Rho = 7800*10**(-9) ; #Masse volumique (kg.mm-3)
+   n = 100 ;#nombre d éléments entre 2 points remarquables de la poutre
+
+   <Defo_init>
+      Ux = -X+(R1*X+R0)*mh.cos(X) ;
+      Uy = (R1*X+R0)*mh.sin(X) ;
+  </Defo_init>
+
+</DIMENSIONS>
+
+<LIMITES> #conditions limites en déplacement
+   <Gauche>
+      Ux = 0.0 ;   #totalement encastré
+      Uy = 0.0 ;
+      Uz = 0.0 ;
+      Theta_x = 0.0 ;
+      Theta_y = 0.0 ;
+      Theta_z = 0.0 ;
+   </Gauche>
+   <Droite>
+
+   </Droite>
+</LIMITES>
+
+<CHARGEMENT> #efforts sur la poutre
+   <Gauche> #effort ponctuel à gauche
+
+   </Gauche>
+   <Droite> 
+      Uy = 0.06 ;
+   </Droite>
+   <Lineique> #effort linéique
+
+   </Lineique>
+</CHARGEMENT>
+
+</POUTRE>
+
+<SOLVEUR>
+
+   Type = statiqueGD;
+   n_iter = 10 ;
+   Nom_sortie = ressortNL;
+
+   <SORTIE>
+       Poutre = Poutre1 ;
+       U = Uy ;
+       F =  ;
+   </SORTIE>
+
+   <SORTIE_AFFI>
+      Poutre = Poutre1 ;
+      Coord = X Y Z ;
+      U = ;
+      F = ;
+   </SORTIE_AFFI>
+   
+</SOLVEUR>
+
+<PARAMETRES>
+
+   Th1 = 6*3.14159 ;
+   R0 = 200-6*3.14159*5;
+   R1 = 5;
+   B1 = 5;
+   H1 = 1;
+
+</PARAMETRES>

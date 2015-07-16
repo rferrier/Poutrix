@@ -1,14 +1,15 @@
 #This code provides the finite elements solver for assemblies of beams
 
 #Internal importations
-import numpy as np
-from scipy.linalg import *
-from solveur_poutres_v5 import *
+
+from solveur_poutres_v6 import *
+from parser_pout_v2_2 import parser
 
 #External importations
+import numpy as np
+from scipy.linalg import *
 import sp
 import math as mh
-from parser_pout_v2_1 import parser
 import os as os
 
 class Reader :
@@ -21,37 +22,46 @@ class Reader :
         self.read_input(data)
         #print(self.input[0])
 
+        #processing of the parameters            
+        if len(self.input[5]) == 1 :
+            self.param = ParamR(self.input[5][0],self) 
+
         #distributing lists to readers
+        self.msys = []
         self.link = []
         self.beam = []
         self.beamCut = [] #it will contain the points where the beam will be cut
-        #print(self.beamCut)        
+        #print(self.beamCut)   
+        self.msysName = {} #name of the system : MobSystem object
         self.beamName = {} #number : 'name' of the beam
         self.beamName1 = {} #the invert of beamName
         self.beamLeng = {} #name of the beam : leng of the beam
 
-        for i in range(len(self.input[0])) :
+        for i in range(len(self.input[1])) :
             #pre-processing of the beams
             self.beamCut.append([])
-            self.beamName[self.input[0][i][0]] = i  
-            self.beamName1[i] = self.input[0][i][0]
+            self.beamName[self.input[1][i][0]] = i  
+            self.beamName1[i] = self.input[1][i][0]
             #pre-computation of the length :
-            self.beamLeng[self.input[0][i][0]] = mh.sqrt((self.input[0][i][1][0][0]-self.input[0][i][1][1][0])**2 + (self.input[0][i][1][0][1]-self.input[0][i][1][1][1])**2 + (self.input[0][i][1][0][2]-self.input[0][i][1][1][2])**2)
+            self.beamLeng[self.input[1][i][0]] = mh.sqrt((eval(self.input[1][i][1][0][0])-eval(self.input[1][i][1][1][0]))**2 + (eval(self.input[1][i][1][0][1])-eval(self.input[1][i][1][1][1]))**2 + (eval(self.input[1][i][1][0][2])-eval(self.input[1][i][1][1][2]))**2)
 
         #print(self.beamName1)
-        for i in range(len(self.input[1])) :
+        for i in range(len(self.input[3])) :
             #pre-processing of the links in order to mesh the beams
             #every beam becomes its links points (in order to place a node)
-            self.beamCut[self.beamName[self.input[1][i][0]]].append(self.input[1][i][1])
-            self.beamCut[self.beamName[self.input[1][i][2]]].append(self.input[1][i][3])
+            self.beamCut[self.beamName[self.input[3][i][0]]].append(eval(self.input[3][i][1]))
+            self.beamCut[self.beamName[self.input[3][i][2]]].append(eval(self.input[3][i][3]))
         
-        for i in range(len(self.input[0])) :
-            self.beam.append(BeamR(self.input[0][i],self))
-            
         for i in range(len(self.input[1])) :
-            self.link.append(LinkR(self.input[1][i],self))
+            self.beam.append(BeamR(self.input[1][i],self))
             
-        self.solr = SolvR(self.input[2],self)
+        for i in range(len(self.input[2])):
+            self.msys.append(MobSystem(self.input[2][i],self))
+            
+        for i in range(len(self.input[3])) :
+            self.link.append(LinkR(self.input[3][i],self))
+            
+        self.solr = SolvR(self.input[4],self)
         
         self.build_output()
         self.solve(self.assemlist)
@@ -98,9 +108,9 @@ class Reader :
     def solve(self,data):
 
         #Launching of the solver
-        if self.solr.type == 'static':
+        if self.solr.type == 'static' or self.solr.type == 'statique':
             print('Assemblage de la matrice de rigidité')
-            self.solv = Assembly_solv(data)
+            self.solv = Assembly_solv(data,self)
             print('Résolution du problème linéaire')
             self.solv.static_solv()
 
@@ -111,7 +121,7 @@ class Reader :
             self.cutVector([self.u])
             
             #printing in file :
-            self.outChaine = 'Resultats pour la simulation statique : ' + str(self.title) + '\n\nLes déplacements sont donnés dans la base globale\net les efforts de cohésion dans les bases locales de la poutre\n'        
+            self.outChaine = 'Resultats pour la simulation statique : ' + str(self.title) + '\n\nLes déplacements et les efforts de cohésion sont donnés dans la base globale\n'        
 
             self.outName = str(self.solr.outName) + '.txt'
             self.f = open(self.outName,'w')
@@ -122,17 +132,56 @@ class Reader :
             self.f.close()
             os.startfile(self.outName)
             print('Fin de résolution du problème statique')
+            
+        if self.solr.type == 'staticGD' or self.solr.type == 'statiqueGD':
+            self.niter = self.solr.niter
+            
+            #first iteration
+            self.solv = Assembly_solv(data,self)
+            
+            print('iteration : 1/'+str(self.niter))
+            self.solv.static_solv()
+            
+            self.u = self.solv.u/self.niter
+            
+            for i in range(self.niter-1):
+                
+                #Updating matrix
+                self.cutVector([self.u])
+                self.updateKnF()
+                
+                print('iteration : '+str(i+2)+'/'+str(self.niter))
+                
+                self.solv.u = solve(self.solv.A,self.solv.b,sym_pos = True)
+                
+                self.u += self.solv.u/self.niter
+            
+            self.cutVector([self.u])
+                
+            #printing in file :
+            self.outChaine = 'Resultats pour la simulation statique avec grands déplacements : ' + str(self.title) + '\n\nLes déplacements et les efforts de cohésion sont donnés dans la base globale\n'        
+
+            self.outName = str(self.solr.outName) + '.txt'
+            self.f = open(self.outName,'w')
+
+            self.outputResults(self.outChaine,0)
+            
+            self.f.write(self.outChaine)
+            self.f.close()
+            os.startfile(self.outName)
+            print('Fin de résolution du problème statique')
+                
 
         if self.solr.type == 'modal':
             print('Assemblage des matrices de masse et de rigidité')
-            self.solv = Assembly_solv(data)
+            self.solv = Assembly_solv(data,self)
             print('Résolution du problème aux valeurs propres généralisé')
             self.solv.modal_solv()
             
             #printing of the arg first modes :
             print('Post-traitement et affichage des résultats')
             
-            self.outChaine = 'Resultats pour la simulation modale : ' + str(self.title) + '\n\nLes déplacements sont donnés dans la base globale\net les efforts de cohésion dans les bases locales de la poutre\n'        
+            self.outChaine = 'Resultats pour la simulation modale : ' + str(self.title) + '\n\nLes déplacements et les efforts de cohésion sont donnés dans la base globale\n'        
 
             self.outName = str(self.solr.outName) + '.txt'
             self.f = open(self.outName,'w')
@@ -162,10 +211,10 @@ class Reader :
             os.startfile(self.outName)
             print('Fin de résolution du problème modal')
             
-        if self.solr.type == 'dynamic':
+        if self.solr.type == 'dynamic' or self.solr.type == 'dynamique' :
             
             print('Assemblage des matrices de masse et de rigidité')
-            self.solv = Assembly_solv(data)
+            self.solv = Assembly_solv(data,self)
             print('Inversion de la matrice et itérations de Newmark')
             self.solv.dyna_solv(self.solr.dt,self.solr.duree)
             
@@ -173,7 +222,7 @@ class Reader :
             
             #printing the results     
             print('Post-traitement et affichage des résultats')
-            self.outChaine = 'Resultats pour la simulation dynamique : ' + str(self.title) + '\n\nLes déplacements sont donnés dans la base globale\net les efforts de cohésion dans les bases locales de la poutre\n'        
+            self.outChaine = 'Resultats pour la simulation dynamique : ' + str(self.title) + '\n\nLes déplacements et les efforts de cohésion sont donnés dans la base globale\n'        
 
             self.outName = str(self.solr.outName) + '.txt'
             self.f = open(self.outName,'w')
@@ -211,9 +260,7 @@ class Reader :
             
             for ti in range(len(u)) : #time
                 i.u.append(u[ti][j:j+6*len(i.elements)+6])
-
-                i.uloc.append(self.solv.pas[i1]*i.u[ti])           #base changing (local)               
-                self.solv.microsolv[i1].mesh.compute_F1(i.uloc[ti])
+                self.solv.microsolv[i1].mesh.compute_F1(i.u[ti])
                 i.f.append(self.solv.microsolv[i1].mesh.F1)
                 
                 #Separating components
@@ -229,11 +276,52 @@ class Reader :
                         i.t[ti][k].append(i.f[ti][6*k2+k][0])
                         
             j = j + 6*len(i.elements) + 6
+            
+    def updateKnF(self):
+        #updating K and f for geometrical non-linear problems
+        ti = 0
+        for j in range(len(self.solv.microsolv)):
+            j1 = self.solv.microsolv[j]
+            #self.beam[i].straight = 'defo'
+            #print(j1.mesh.elements)
+            for i in range(len(j1.mesh.elements)) :
+                i1 = j1.mesh.elements[i]
+                #re-computing x,y and z
+                xd = self.beam[j].v[ti][0][i]
+                yd = self.beam[j].v[ti][1][i]
+                zd = self.beam[j].v[ti][2][i]
+                
+                xf = i1.lenginit*mh.cos(i1.theta1init)*mh.cos(i1.theta2init) + self.beam[j].v[ti][0][i+1]
+                yf = i1.lenginit*mh.sin(i1.theta1init)*mh.cos(i1.theta2init) + self.beam[j].v[ti][1][i+1]
+                zf = -i1.lenginit*mh.sin(i1.theta2init) + self.beam[j].v[ti][2][i+1]
+                #re-computation of h and theta
+                h = mh.sqrt((xf-xd)**2 + (yf-yd)**2 + (zf-zd)**2)
+                resuloc = compute_angle(xd,yd,zd,xf,yf,zf)
+                
+                #replacement in elemn caracteristics :
+                i1.leng = h
+                i1.theta1 = resuloc[0]
+                i1.theta2 = resuloc[1]
+                
+                #re-computing of matrix :
+                i1.compute_Ke()
+                i1.compute_be()
+                i1.compute_P()
+            j1.mesh.compute_A()
+            #print(j1.mesh.A)
+            j1.mesh.compute_b()
+            
+        self.solv.assembly_A()
+        for i in self.solv.links:
+            i.update_matrix()
+
+        self.solv.assembly_b()           
         
     def outputResults(self,chaine,time):
         #Building the output file
         microlist = ['u_x','u_y','u_z','theta_x','theta_y','theta_z']
         microlist2 = ['F_x','F_y','F_z','M_x','M_y','M_z']
+        microlist3 = ['x','y','z']
 
         alpha = 0
         for k in self.beam:
@@ -256,9 +344,64 @@ class Reader :
                     self.outChaine = self.outChaine + '\n' + microlist2[i] + '\n\n'
                     for j in k.t[time][i]:
                         self.outChaine = self.outChaine + str(j[0,0]) + '\n'
+       
+       
+            if self.beamName1[alpha] in self.solr.postProVI : #Plot Output
+
+                self.outChaine = self.outChaine + '\n' + str(self.beamName1[alpha]) +'\n\n'
+
+                #let's begin with the title
+                for i in self.solr.postProIV[self.beamName1[alpha]] : #We take only the specified components
+                    self.outChaine = self.outChaine + microlist3[i] + self.solr.separator
+                for i in self.solr.postProV[self.beamName1[alpha]] :
+                    self.outChaine = self.outChaine + microlist[i] + self.solr.separator
+                for i in self.solr.postProVI[self.beamName1[alpha]] :
+                    self.outChaine = self.outChaine + microlist2[i] + self.solr.separator
                     
+                self.outChaine = self.outChaine + '\n'
+                
+                for j1 in range(len(self.solv.microsolv[alpha].mesh.nodes)) :
+                    self.solv.microsolv[alpha].mesh.nodes[j1].compute_coords()
+                    for i1 in range(len(self.solr.postProIV[self.beamName1[alpha]])) : #We take only the specified components
+                        i = self.solr.postProIV[self.beamName1[alpha]][i1] #the n° of the component
+                        j = self.solv.microsolv[alpha].mesh.nodes[j1].coords[self.solr.postProIV[self.beamName1[alpha]][i1]]
+                        if type(j) == np.matrix :
+                            self.outChaine = self.outChaine + str(abs(j[0,0])) + ';'
+                        else :
+                            self.outChaine = self.outChaine + str(j) + ';'
+
+                    for i1 in range(len(self.solr.postProV[self.beamName1[alpha]])) : #We take only the specified components
+                        i = self.solr.postProV[self.beamName1[alpha]][i1] #the n° of the component
+                        
+                        j = k.v[time][i][j1]
+                        if type(j) == np.matrix :
+                            self.outChaine = self.outChaine + str(abs(j[0,0])) + ';'
+                        else :
+                            self.outChaine = self.outChaine + str(j) + ';'
+                            
+                    for i1 in range(len(self.solr.postProVI[self.beamName1[alpha]])) : #We take only the specified components
+                        i = self.solr.postProVI[self.beamName1[alpha]][i1] #the n° of the component
+                        
+                        #j = k.t[time][i][j1]
+                        j = 'sorry:not_implemented'
+                        if type(j) == np.matrix :
+                            self.outChaine = self.outChaine + str(abs(j[0,0])) + ';'
+                        else :
+                            self.outChaine = self.outChaine + str(j) + ';'
+                            
+                    self.outChaine = self.outChaine + '\n'
+                            
             alpha = alpha + 1
 
+class ParamR :
+    #Parameters reader
+    def __init__(self,data,parent):
+        
+        self.parent = parent
+        #processing of the parameters values
+        for i in data:
+            globals()[i[0]] = eval(i[1])
+        
 class LinkR :
     #Link Reader
 
@@ -272,9 +415,10 @@ class LinkR :
         self.rightB = parent.beamName[data[2]]
         self.rightL = parent.beamLeng[data[2]]
         epsilon = 0.000000001
+        
         simeq = False
         for i in parent.beam[self.leftB].ltelist:
-            if data[1] < i+epsilon/self.leftL and data[1] > i-epsilon/self.leftL:
+            if eval(data[1]) < i+epsilon/self.leftL and eval(data[1]) > i-epsilon/self.leftL:
                 iretenu = i
                 simeq = True
         if simeq == True:
@@ -282,7 +426,7 @@ class LinkR :
             
         simeq = False
         for i in parent.beam[self.rightB].ltelist:
-            if data[3] < i+epsilon/self.rightL and data[3] > i-epsilon/self.rightL:
+            if eval(data[3]) < i+epsilon/self.rightL and eval(data[3]) > i-epsilon/self.rightL:
                 iretenu = i
                 simeq = True            
         if simeq == True:
@@ -297,7 +441,11 @@ class LinkR :
         else :
             self.axis = 0
         
+        #axis system
         self.repere = 'global'
+        if len(self.input[6]) == 1:
+            self.repere = self.input[6][0]
+        
         
     def build_output(self):
         self.output = [self.type,[self.leftB,self.leftX],[self.rightB,self.rightX],self.repere,self.axis]
@@ -307,13 +455,15 @@ class BeamR :
 
     def __init__(self,data,parent):
 
+        self.straight = 'yes'    #by default, the beam is straight
         self.input = data
         #print(self.input)
         #data processing
         self.name = self.input[0]
 
         #characteristics
-        self.leng = mh.sqrt((self.input[1][0][0]-self.input[1][1][0])**2 + (self.input[1][0][1]-self.input[1][1][1])**2 + (self.input[1][0][2]-self.input[1][1][2])**2)
+        self.leng = mh.sqrt((eval(self.input[1][0][0])-eval(self.input[1][1][0]))**2 + (eval(self.input[1][0][1])-eval(self.input[1][1][1]))**2 + (eval(self.input[1][0][2])-eval(self.input[1][1][2]))**2)
+        self.origin = (eval(self.input[1][0][0]),eval(self.input[1][0][1]),eval(self.input[1][0][2])) #x,y,z at the left point of the beam
         self.E = self.input[1][2]
         self.nu = self.input[1][3]
         self.S = self.input[1][4]
@@ -322,6 +472,7 @@ class BeamR :
         self.rho = self.input[1][7]
         
         #Links
+        #print(parent.beamName)
         self.cut1 = parent.beamCut[parent.beamName[self.name]]
         self.cut = []
         #removing doubles elements :
@@ -382,16 +533,39 @@ class BeamR :
         self.list_char = [self.fx,self.fy,self.fz,self.mx,self.my,self.mz]
 
         #transforming 1 or 0 elements liste into numbers
-
         for i in range(len(self.list_char)):
             if len(self.list_char[i]) == 0:
-                self.list_char_mieux1[i] = 0.
+                self.list_char_mieux1[i] = '0.'
                 
             else :
                 self.list_char_mieux1[i] = self.list_char[i][0]
         
         #Type of mesh
-        self.elem_number = self.input[1][8]
+        self.elem_number = eval(self.input[1][8])
+        
+        #processing of initial deformation
+        self.defo = self.input[1][9]
+        if self.defo != [] :
+            self.straight = 'defo'
+            
+            self.xdefo1 = self.defo[0][0]
+            if self.xdefo1 == []:
+                self.xdefo = '0.'
+            else :
+                self.xdefo  =self.xdefo1[0]
+                
+            self.ydefo1 = self.defo[0][1]
+            if self.ydefo1 == []:
+                self.ydefo = '0.'
+            else :
+                self.ydefo  =self.ydefo1[0]
+                
+            self.zdefo1 = self.defo[0][2]
+            if self.zdefo1 == []:
+                self.zdefo = '0.'
+            else :
+                self.zdefo  =self.zdefo1[0]
+
 
         #Initialization of the elements
         self.elements = []
@@ -400,12 +574,12 @@ class BeamR :
         self.list_char = [self.E,self.nu,self.S,self.Iy,self.Iz,self.rho,self.list_char_mieux1[0],self.list_char_mieux1[1],self.list_char_mieux1[2],self.list_char_mieux1[3],self.list_char_mieux1[4],self.list_char_mieux1[5]] 
         self.list_char_mieux2 = [0]*len(self.list_char)
         self.j = 0
-        
+
         for i in range(len(self.list_char)) :
             #looking for a changing characteristic
-            if type(self.list_char[i]) == str:#found !
+            if self.list_char[i][0] == '[':#found !
                 #building of the name of the file to open
-                self.name1 = self.list_char[i] + '.dat'
+                self.name1 = self.list_char[i][1:-1] + '.dat'
 
                 #building the mesh
                 if self.j != 1:
@@ -426,14 +600,21 @@ class BeamR :
                         self.list_char_mieux2[i].append(float(n))
                     else:
                         self.k = 1
+                        
+                self.f.close
 
         if self.j == 0 :
             self.simple_mesh()
 
         for i in range(len(self.list_char)) :
-            #Building of the list of constant char
-            if type(self.list_char[i]) == float:
-                self.list_char_mieux2[i] = [self.list_char[i]]*(len(self.elements) + 1)
+            #Building of the list of char if it is not in a file
+            if self.list_char[i][0] != '[':
+                X = 0  #init of curvilign abscissa
+                self.list_char_mieux2[i] = []
+                for j in range(len(self.elements)+1) :
+                    self.list_char_mieux2[i].append(eval(self.list_char[i]))
+                    if j<len(self.elements):
+                        X = X + self.elements[j]
 
         #print(self.list_char_mieux2) #from now, this list will be used
         #Building the lis of the no of nodes with links
@@ -487,8 +668,48 @@ class BeamR :
                 self.ltelist.append(alpha)
         #print(self.lte)
         #print(self.ltelist)
+    
+    def compute_angles(self):
+        if self.straight == 'yes':
+            #it's useless to compute every angle
+            resu = compute_angle(eval(self.input[1][0][0]),eval(self.input[1][0][1]),eval(self.input[1][0][2]),eval(self.input[1][1][0]),eval(self.input[1][1][1]),eval(self.input[1][1][2]))
+    
+            self.theta1 = [resu[0]]*len(self.elements)
+            self.theta2 = [resu[1]]*len(self.elements)
+            
+        if self.straight == 'defo':
+            self.theta1 = []
+            self.theta2 = []
+            self.elements1 = []
+            X = 0.
+            
+            #processing of the origin :
+            self.origin = (self.origin[0]+eval(self.xdefo),self.origin[1]+eval(self.ydefo),self.origin[2]+eval(self.zdefo))
+            #pre-computation of theta
+            resu = compute_angle(eval(self.input[1][0][0]),eval(self.input[1][0][1]),eval(self.input[1][0][2]),eval(self.input[1][1][0]),eval(self.input[1][1][1]),eval(self.input[1][1][2]))
+            for i in range(len(self.elements)) :
+                #re-computing x,y and z
+                xd = eval(self.xdefo)
+                yd = eval(self.ydefo)
+                zd = eval(self.zdefo)
+
+                X = X + self.elements[i]
+                
+                xf = self.elements[i]*mh.cos(resu[0])*mh.cos(resu[1]) + eval(self.xdefo)
+                yf = self.elements[i]*mh.sin(resu[0])*mh.cos(resu[1]) + eval(self.ydefo)
+                zf = -self.elements[i]*mh.sin(resu[1]) + eval(self.zdefo)
+                #re-computation of h and theta
+                self.elements1.append(mh.sqrt((xf-xd)**2 + (yf-yd)**2 + (zf-zd)**2))
+                resuloc = compute_angle(xd,yd,zd,xf,yf,zf)
+                self.theta1.append(resuloc[0])
+                self.theta2.append(resuloc[1])
+            
+            self.elements = self.elements1[:] #repalcement of h
+
 
     def build_output(self):
+
+        self.compute_angles()
 
         self.output = []
 
@@ -500,11 +721,11 @@ class BeamR :
                 #free
                 self.output[0][i] = 1
             else :
-                self.output[0][i] = self.list_char[i][0]
+                self.output[0][i] = eval(self.list_char[i][0])
 
         #nodes
         for i in range (len(self.list_char_mieux2[0])):
-            self.output.append([[0.]*6,[0.]*7,[0.]*6])
+            self.output.append([[0.]*6,[0.]*9,[0.]*6])
 
             self.output[i+1][2][0] = self.list_char_mieux2[6][i]#fx
             self.output[i+1][2][1] = self.list_char_mieux2[7][i]#fy
@@ -512,11 +733,11 @@ class BeamR :
             self.output[i+1][2][3] = self.list_char_mieux2[9][i]#mx
             self.output[i+1][2][4] = self.list_char_mieux2[10][i]#my
             self.output[i+1][2][5] = self.list_char_mieux2[11][i]#mz
-            
-            if i == len(self.elements): #writing of the last and useless h
-                self.output[i+1][1][0] = 1.#h
-            else :
+                
+            if i < len(self.elements): #the last element of the list only represents a node
                 self.output[i+1][1][0] = self.elements[i]#h
+                self.output[i+1][1][7] = self.theta1[i]#theta1
+                self.output[i+1][1][8] = self.theta2[i]#theta2
 
             self.output[i+1][1][1] = self.list_char_mieux2[5][i]*self.list_char_mieux2[2][i]#\mu = \rho*S
             self.output[i+1][1][2] = self.list_char_mieux2[0][i]*self.list_char_mieux2[2][i]#ES
@@ -536,7 +757,7 @@ class BeamR :
                 self.list_char_mieux3[i] = 0.
                 
             else :
-                self.list_char_mieux3[i] = self.list_char[i][0]
+                self.list_char_mieux3[i] = eval(self.list_char[i][0])
                 
         self.output[1][0][0] = self.output[1][0][0] + self.list_char_mieux3[0]#Fx
         self.output[1][0][1] = self.output[1][0][1] + self.list_char_mieux3[1]#Fy
@@ -561,12 +782,25 @@ class BeamR :
                 #free
                 self.output[len(self.elements)+2][i] = 1
             else :
-                self.output[len(self.elements)+2][i] = self.list_char[i][0]
+                self.output[len(self.elements)+2][i] = eval(self.list_char[i][0])
         
         #dimensions of the beam :
-        self.output1 = [[self.input[1][0][0],self.input[1][0][1],self.input[1][0][2],self.input[1][1][0],self.input[1][1][1],self.input[1][1][2]],self.output]
+        self.output1 = [[eval(self.input[1][0][0]),eval(self.input[1][0][1]),eval(self.input[1][0][2]),eval(self.input[1][1][0]),eval(self.input[1][1][1]),eval(self.input[1][1][2])],self.output,self.origin]
 
-        #print(self.output1)  
+        #print(self.output1)
+
+    def computeNoOfNode(self,givAbscissa) :
+        """This function computes the n° of a node when it's abscissa is given"""
+        abscissa = 0
+        listOfEl = self.elements
+
+        for j in range(len(listOfEl)) : #the elements of the beam
+                abscissa = abscissa + listOfEl[j] #increment of length
+
+                if abscissa < givAbscissa + 0.000000001*self.leng and abscissa > givAbscissa - 0.000000001*self.leng :
+                    theChosen = j #the good n° of node
+        
+        return theChosen
 
 class SolvR :
     #The reader for solver data
@@ -578,20 +812,24 @@ class SolvR :
         #Processing of the optional arguments (ex : nb of modes)
         self.arg = 1
         if len(data[0][1]) == 1:
-            self.arg = data[0][1][0]
+            self.arg = eval(data[0][1][0])
         
         self.duree = 1
         if len(data[1]) == 1:
-            self.duree = data[1][0]
+            self.duree = eval(data[1][0])
             
         self.dt = 0.1
         if len(data[2]) == 1:
-            self.dt = data[2][0]
+            self.dt = eval(data[2][0])
+        
+        self.niter = 10
+        if len(data[3]) == 1:
+            self.niter = eval(data[3][0])
             
-        self.outName = data[3]
+        self.outName = data[4]
         
         #reading of postprocess instructions
-        self.ppi = data[4]
+        self.ppi = data[5]
         self.postProI = {} #'beamName':[components]
         self.postProII = {} #F
         dico = {'Ux':0,'Uy':1,'Uz':2,'Theta_x':3,'Theta_y':4,'Theta_z':5}
@@ -607,41 +845,60 @@ class SolvR :
                 liste1.append(dico[self.ppi[i][2][j]])
             self.postProII[self.ppi[i][0]] = liste1
         
-        self.ppiii = data[5]
+        self.ppiii = data[6]
         self.postProIII = [] #('beamName',n° of node,n° of component,abscissa,'component')
         
         for i in self.ppiii :
             #print(self.parent.beamName)
             #Computing the n° of node associated with the given abscissa :
-            abscissa = 0
-            listOfEl = self.parent.beam[self.parent.beamName[i[0]]].elements
-
-            for j in range(len(listOfEl)) : #the elements of the beam
-                abscissa = abscissa + listOfEl[j] #increment of length
-                
-                if abscissa < i[1] + 0.000000001*self.parent.beam[self.parent.beamName[i[0]]].leng and abscissa > i[1] - 0.000000001*self.parent.beam[self.parent.beamName[i[0]]].leng :
-                    theChosen = j #the good n° of node
                     
-            self.postProIII.append((i[0],theChosen,dico[i[2]],i[1],i[2]))
+            theBeam = self.parent.beam[self.parent.beamName[i[0]]]
+                    
+            self.postProIII.append((i[0],theBeam.computeNoOfNode(eval(i[1])),dico[i[2]],i[1],i[2]))
+
+        #reading of plot postprocess instructions
+        self.ppiv = data[7]
+        
+        self.separator = ';'
+        
+        if self.ppiv!= []:
+            if self.ppiv[0][4] != []:
+                self.separator = self.ppiv[0][4][0]
+                
+        self.postProIV = {} #X,Y,Z'beamName':[components]
+        self.postProV = {} #U
+        self.postProVI = {} #F
+        dicoxyz = {'X':0,'Y':1,'Z':2}
+        for i in range(len(self.ppiv)) :
+            liste = []
+            liste1 = []
+            liste2 = []
+            
+            for j in range(len(self.ppiv[i][1])) : #X
+                liste.append(dicoxyz[self.ppiv[i][1][j]])
+            self.postProIV[self.ppiv[i][0]] = liste
+            
+            for j in range(len(self.ppiv[i][2])) : #U
+                liste1.append(dico[self.ppiv[i][2][j]])
+            self.postProV[self.ppiv[i][0]] = liste1
+
+            for j in range(len(self.ppiv[i][3])) : #F
+                liste2.append(dico[self.ppiv[i][3][j]])
+            self.postProVI[self.ppiv[i][0]] = liste2
 
 class Assembly_solv :
 
-    def __init__ (self,data):
+    def __init__ (self,data,parent):
+        self.parent = parent
         #data recovering
         self.beams = data[0]
+        #print(self.beams)
         self.linksd = data[1]
         self.microsolv = []
         self.links = []
         
         self.create_microsolv()
         self.create_links()
-
-        #computation of the theta
-
-        self.theta1 = [0]*len(self.microsolv)
-        self.theta2 = [0]*len(self.microsolv)
-        for i in range(len(self.beams)):
-            self.compute_angle(i)
 
     def create_microsolv (self):
         #creation of the local solvers for each beam
@@ -704,89 +961,23 @@ class Assembly_solv :
             i.mesh.compute_M()
             i.mesh.compute_b()
 
-    def compute_angle(self,i):
-
-        #computation of theta1 and theta2 for one beam
-        self.x = self.beams[i][0][3] - self.beams[i][0][0]
-        self.y = self.beams[i][0][4] - self.beams[i][0][1]
-        self.z = self.beams[i][0][5] - self.beams[i][0][2]
-
-        #avoiding of 1/0
-        if self.x == 0.:
-            if self.y > 0.:
-                self.theta1[i] = pi/2
-            if self.y < 0.:
-                self.theta1[i] = -pi/2
-            if self.y == 0.:
-                if self.z > 0.:
-                    self.theta2[i] = -pi/2
-                else:
-                    self.theta2[i] = pi/2
-
-            else :
-                self.theta2[i] = - mh.atan(self.z/mh.sqrt(self.x*self.x+self.y*self.y))
-
-        else :
-            self.theta1[i] = mh.atan(self.y/self.x)
-            self.theta2[i] = - mh.atan(self.z/mh.sqrt(self.x*self.x+self.y*self.y))
-            
-        #print(self.x,self.y,self.z,self.theta1,self.theta2)
-
-    def transform_mat (self):       
-        #rotating of the matrix of a beam
-
-        self.pas = [0.]*len(self.microsolv)
-        self.pas1 = [0.]*len(self.microsolv)
-
-        #initilaisation of the list of rigidity matrix befor assembly
-        self.Mlist = [0.]*len(self.microsolv)
-        self.Alist = [0.]*len(self.microsolv)
-        self.blist = [0.]*len(self.microsolv)
-        #computing of the elementary passage matrix
-        for i in range(len(self.microsolv)) :
-            for j in self.microsolv[i].mesh.elements:
-                j.compute_P(self.theta1[i],self.theta2[i])
-
-            #assembly of P in order to get the passage matrix for the beam
-
-            self.pas[i] = np.mat([[0.]*self.microsolv[i].mesh.size]*self.microsolv[i].mesh.size)
-
-            s = 0
-            for ii in range(len(self.microsolv[i].mesh.elements)):
-                for jj in range(len(self.microsolv[i].mesh.elements[ii].pas)):
-                    for kk in range(len(self.microsolv[i].mesh.elements[ii].pas)):
-                        self.pas[i][s+jj,s+kk] = self.pas[i][s+jj,s+kk] + self.microsolv[i].mesh.elements[ii].pas[jj,kk]
-
-                #incrementation of the place for the pas
-                s = s + len(self.microsolv[i].mesh.elements[ii].pas)-6
-
-            #inverting the elementary matrix
-            self.pas1[i] = np.transpose(self.pas[i])
-            #print(self.pas[i])
-
-            #writing of the rotation
-            self.Mlist[i] = self.pas1[i] * self.microsolv[i].mesh.M * self.pas[i]
-            self.Alist[i] = self.pas1[i] * self.microsolv[i].mesh.A * self.pas[i]
-            self.blist[i] = self.microsolv[i].mesh.b
-
     def static_solv(self):
         self.compute_mat()
         self.compute_leng()
 
-        self.transform_mat()
         self.assembly_A()
         self.compute_pen()
-        #print(self.links)
+
         for i in self.links:
             i.compute_matrix()
         self.assembly_b()
+
         self.u = solve(self.A,self.b,sym_pos = True)
         
     def modal_solv(self):
         self.compute_mat()
         self.compute_leng()
         
-        self.transform_mat()
         self.assembly_A()
         self.assembly_M()
         self.compute_pen()
@@ -801,7 +992,6 @@ class Assembly_solv :
         self.compute_mat()
         self.compute_leng()
 
-        self.transform_mat()
         self.assembly_A()
         self.assembly_M()
         self.compute_pen()
@@ -857,7 +1047,7 @@ class Assembly_solv :
         for i in range(len(self.microsolv)):
             for ii in range(len(self.microsolv[i].mesh.A)):
                 for jj in range(len(self.microsolv[i].mesh.A)):
-                    self.A[s+ii,s+jj] = self.Alist[i][ii,jj]
+                    self.A[s+ii,s+jj] = self.microsolv[i].mesh.A[ii,jj]
 
             s = s + len(self.microsolv[i].mesh.A)
             
@@ -868,7 +1058,7 @@ class Assembly_solv :
         for i in range(len(self.microsolv)):
             for ii in range(len(self.microsolv[i].mesh.M)):
                 for jj in range(len(self.microsolv[i].mesh.M)):
-                    self.M[s+ii,s+jj] = self.Mlist[i][ii,jj]
+                    self.M[s+ii,s+jj] = self.microsolv[i].mesh.M[ii,jj]
 
             s = s + len(self.microsolv[i].mesh.M)
 
@@ -878,7 +1068,7 @@ class Assembly_solv :
         s = 0
         for i in range(len(self.microsolv)):
             for ii in range(len(self.microsolv[i].mesh.b)):
-                self.b[s+ii,0] = self.blist[i][ii,0]
+                self.b[s+ii,0] = self.microsolv[i].mesh.b[ii,0]
 
             s = s + len(self.microsolv[i].mesh.b)
 
@@ -890,26 +1080,85 @@ class Link:
         self.left = data[0]
         self.right = data[1]
         self.rigidity = data[2]
-        self.axis = data[3]
+        self.systemID = data[3]
         self.parent = parent
         self.nbeaml = data[4]
         self.nbeamr = data[5]
 
     def compute_matrix(self):
+        #creating the link's stiffness matrix
+        if self.systemID == 'global' :
+            for i in self.fixed :
+                #computing of the components by euclidian rest:
+                fix0 = i[0] - 6*int(i[0]/6)
+                fix1 = i[1] - 6*int(i[1]/6)
+                fix = max(fix0,fix1)        #??
+                pen = self.parent.pen[fix]
+                
+                self.parent.A[i[0],i[0]] = self.parent.A[i[0],i[0]] + pen
+                self.parent.A[i[1],i[1]] = self.parent.A[i[1],i[1]] + pen
+                self.parent.A[i[1],i[0]] = self.parent.A[i[1],i[0]] - pen
+                self.parent.A[i[0],i[1]] = self.parent.A[i[0],i[1]] - pen
+        
+        else :
+        #we need to change base a matrix
+            self.compute_Aloc()
+            
+            #base changing
+            self.system = self.parent.parent.msysName[self.systemID]
 
-        #updating parent.A
+            self.Aglob = np.transpose(self.system.pas) * self.Aloc * self.system.pas
+
+            #updating parent.A (the global stiffness matrix of the linear problem)
+            self.update_parent()
+
+    def update_matrix(self) :
+        """This function actualizes the matrix of a link. To be used in iterative processes"""
+        #recovering the angles
+        ti = 0
+        beamm = self.parent.parent.beam[self.nbeaml] #the beam  
+        
+        thx = beamm.v[ti][3][self.left]
+        thy = beamm.v[ti][4][self.left]
+        thz = beamm.v[ti][5][self.left]
+
+        pamat = compute_mat_zyx(thz,thy,thx)
+        
+        self.compute_Aloc()
+        
+        if self.systemID == 'global' :
+            self.Aglob = np.transpose(pamat) * self.Aloc * pamat
+            
+        else :
+            self.Aglob = np.transpose(self.system.pas) * np.transpose(pamat) * self.Aloc * pamat * self.system.pas
+        
+        self.update_parent()        
+        
+    def compute_Aloc(self) :
+        """Computes the local stiffness matrix for the link"""
+        self.Aloc = np.mat([[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0]])
+
         for i in self.fixed :
             #computing of the components by euclidian rest:
             fix0 = i[0] - 6*int(i[0]/6)
             fix1 = i[1] - 6*int(i[1]/6)
             fix = max(fix0,fix1)        #??
-            #print(fix)
-            #print(self.parent.pen)
+            pen = self.parent.pen[fix]
             
-            self.parent.A[i[0],i[0]] = self.parent.A[i[0],i[0]] + self.parent.pen[fix]
-            self.parent.A[i[1],i[1]] = self.parent.A[i[1],i[1]] + self.parent.pen[fix]
-            self.parent.A[i[1],i[0]] = self.parent.A[i[1],i[0]] - self.parent.pen[fix]
-            self.parent.A[i[0],i[1]] = self.parent.A[i[0],i[1]] - self.parent.pen[fix]
+            #process of the link's stiffness
+            self.Aloc[fix0,fix0] = pen/10000000   #to avoid error with length
+            self.Aloc[6+fix1,6+fix1] = pen/10000000
+            self.Aloc[fix0,6+fix1] = pen/10000000
+            self.Aloc[6+fix1,fix0] = pen/10000000
+
+    def update_parent(self) :
+        """updates the global stiffness matrix"""
+        for i in range(6) :
+
+            self.parent.A[self.left*6+i,self.left*6+i] = self.parent.A[self.left*6+i,self.left*6+i] + self.Aglob[i,i]*10000000
+            self.parent.A[self.right*6+i,self.right*6+i] = self.parent.A[self.right*6+i,self.right*6+i] + self.Aglob[i+6,i+6]*10000000
+            self.parent.A[self.right*6+i,self.left*6+i] = self.parent.A[self.right*6+i,self.left*6+i] - self.Aglob[i+6,i]*10000000
+            self.parent.A[self.left*6+i,self.right*6+i] = self.parent.A[self.left*6+i,self.right*6+i] - self.Aglob[i,i+6]*10000000
 
 class AppPlan (Link) :
     #appui plan
@@ -998,20 +1247,87 @@ class Encas (Link) :
 
 pi = 3.1415926535
 
-#beam 1
-"""
-L1 = [[0.,0.,0.,0.,1.,0.],[[0.,0.,0.,0.,0.,0.],[[0.,0.,0.,0.,0.,0.],[1/2,1.,1.,1.,1.,1.,1.,1.,1.]],[[0.,0.,0.,0.,0.,0.],[1/2,1.,1.,1.,1.,1.,1.,1.,1.]],[[0.,0.,0.,0.,0.,0.],[1/2,1.,1.,1.,1.,1.,1.,1.,1.]],[[0.,0.,0.,0.,0.,0.],[1/2,1.,1.,1.,1.,1.,1.,1.,1.]],[[0.,0.,0.,0.,0.,0.],[1/2,1.,1.,1.,1.,1.,1.,1.,1.]],[[0.,1.,0.,0.,0.,0.],[1/2,1.,1.,1.,1.,1.,1.,1.,1.]],[1,1,1,1,1,1]]] #[encastré,effort nodal nul *7,effort au bout : 10, libre]
+class MobSystem():
+    #Mobile axis system (for the links)
+    def __init__(self,data,parent):
+        #print(data)
+        self.parent = parent
+        self.data = data
+        
+        self.name = self.data[0]
+        
+        self.parent.msysName[self.name] = self #put it in the dico
+        
+        #find the element used as reference
+        self.beam = self.parent.beam[self.parent.beamName[self.data[1][0]]]
+        self.ref = self.beam.computeNoOfNode(eval(self.data[1][1]))
+        
+        if self.data[2][0] == 'ZYX' :
+            self.pas = compute_mat_zyx(eval(self.data[3]),eval(self.data[4]),eval(self.data[5]))
 
-L2 = [[0.,1.,0.,1.,1.,0.],[[1,1,1,1,1,1],[[0.,0.,0.,0.,0.,0.],[1/2,1.,1.,1.,1.,1.,1.,1.,1.]],[[0.,0.,0.,0.,0.,0.],[1/2,1.,1.,1.,1.,1.,1.,1.,1.]],[[0.,0.,0.,0.,0.,0.],[1/2,1.,1.,1.,1.,1.,1.,1.,1.]],[[0.,0.,0.,0.,0.,0.],[1/2,1.,1.,1.,1.,1.,1.,1.,1.]],[[0.,0.,0.,0.,0.,0.],[1/2,1.,1.,1.,1.,1.,1.,1.,1.]],[[0.,0.,0.,0.,0.,0.],[1/2,1.,1.,1.,1.,1.,1.,1.,1.]],[0.,0.,0.,0.,0.,0.]]] #[encastré,effort nodal nul *7,effort au bout : 10, libre]
 
-#A = Assembly_solv([[L1],[]])
-A = Assembly_solv([[L1,L2],[['rot',[0,5],[1,0],'global']]])
-#A.static_solv()
-A.modal_solv()
-print(A.u[:,0])"""
+#Functions
 
-#[[[x0,y0,z0,xf,yf,zf],beam1],[beam2],[beam3]...,[[links]]]
-#link : ['class',[n°beam,n°point],[n°beam,n°point],'axis system']
+def compute_angle(x1,y1,z1,x2,y2,z2):
+
+    #computation of theta1 and theta2 for one beam
+    x = x2-x1
+    y = y2-y1
+    z = z2-z1
+    h = mh.sqrt(x**2+y**2)
+
+    if x > 0.:
+        if y > 0.:
+            theta1 = mh.atan(y/x)
+            theta2 = -mh.atan(z/h)
+        if y < 0.:
+            theta1 = mh.atan(y/x)
+            theta2 = -mh.atan(z/h)
+        if y == 0.:
+            theta2 = -mh.atan(z/h)
+            theta1 = 0.
+            
+    if x < 0.:
+        if y > 0.:
+            theta1 = pi-mh.atan(-y/x)
+            theta2 = -mh.atan(z/h)
+        if y < 0.:
+            theta1 = -pi+mh.atan(y/x)
+            theta2 = -mh.atan(z/h)
+        if y == 0.:
+            theta2 = -mh.atan(z/h)
+            theta1 = 0.
+        
+    if x == 0.:
+        if y > 0.:
+            theta1 = pi/2
+            theta2 = -mh.atan(z/h)
+        if y < 0.:
+            theta1 = -pi/2
+            theta2 = -mh.atan(z/h)
+        if y == 0.:
+            if z > 0.:
+                theta2 = -pi/2
+            else:
+                theta2 = pi/2
+            theta1 = 0.
+            
+    #print(x,y,z,self.theta1,self.theta2)
+    return theta1 , theta2
+
+def compute_mat_zyx(th3,th2,th1):
+    """Computation of the matrix using the zyx method"""
+    c1 = mh.cos(th1)
+    c2 = mh.cos(th2)
+    c3 = mh.cos(th3)
+    s1 = mh.sin(th1)
+    s2 = mh.sin(th2)
+    s3 = mh.sin(th3)
+    
+    return np.mat([[c1*c3,-s1*s2*c3+c1*s3,c1*s2*c3+s1*s3,0,0,0,0,0,0,0,0,0],[-c2*s3,s1*s2*s3+c1*c3,-c1*s2*s3+c3*s1,0,0,0,0,0,0,0,0,0],[-s2,-s1*c2,c1*c2,0,0,0,0,0,0,0,0,0],[0,0,0,c1*c3,-s1*s2*c3+c1*s3,c1*s2*c3+s1*s3,0,0,0,0,0,0],[0,0,0,-c2*s3,s1*s2*s3+c1*c3,-c1*s2*s3+c3*s1,0,0,0,0,0,0],[0,0,0,-s2,-s1*c2,c1*c2,0,0,0,0,0,0],[0,0,0,0,0,0,c1*c3,-s1*s2*c3+c1*s3,c1*s2*c3+s1*s3,0,0,0],[0,0,0,0,0,0,-c2*s3,s1*s2*s3+c1*c3,-c1*s2*s3+c3*s1,0,0,0],[0,0,0,0,0,0,-s2,-s1*c2,c1*c2,0,0,0],[0,0,0,0,0,0,0,0,0,c1*c3,-s1*s2*c3+c1*s3,c1*s2*c3+s1*s3],[0,0,0,0,0,0,0,0,0,-c2*s3,s1*s2*s3+c1*c3,-c1*s2*s3+c3*s1],[0,0,0,0,0,0,0,0,0,-s2,-s1*c2,c1*c2]])
+
+
 if __name__ == "__main__":
-    B = Reader("dynatest.txt")
+    B = Reader("ressorts//ressort_berx1.txt")
+    #B = Reader("dynatest.txt")
 #print(B.v)

@@ -9,7 +9,7 @@
    Iy = 0.000000000002 ;#Quadratic moment (m^4)
    Iz = 0.000000000002 ;#Quadratic moment (m^4)
    Rho = 7800 ; #Volumic mass (kg.m-3)
-   n = 20 ;#nb of elements between 2 sides of the beam
+   n = 30 ;#nb of elements between 2 sides of the beam
 </DIMENSIONS>
 
 <BOUNDARIES> #boundaries conditions for displacement

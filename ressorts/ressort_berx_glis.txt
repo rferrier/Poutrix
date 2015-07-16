@@ -1,0 +1,135 @@
+<Nom Poutre="Ressort" >
+
+<DIMENSIONS>
+   Gauche : 0.0 , 0.0 , 0.0 ;#Coordonnées du point de début de la poutre(mm)
+   Droite : Th1 , 0.0 , 0.0 ;#Coordonnées du point de fin de la poutre (mm)
+   E = 210000 ;#Module d Young (MPa)
+   Nu = 0.3 ;#Coefficient de Poisson
+   S = B1*H1 ;#Section(mm^2)
+   Iy = B1*H1**3/12 ;#Moment quadratique (mm^4)
+   Iz = H1*B1**3/12 ;
+   Rho = 7800*10**(-9) ; #Masse volumique (kg.mm-3)
+   n = 100 ;#nombre d éléments entre 2 points remarquables de la poutre
+
+   <Defo_init>
+      Ux = -X+(R1*X+R0)*mh.cos(X) ;
+      Uy = (R1*X+R0)*mh.sin(X) ;
+  </Defo_init>
+
+</DIMENSIONS>
+
+<LIMITES> #conditions limites en déplacement
+   <Gauche>
+      Ux = 0.0 ;   #totalement encastré
+      Uy = 0.0 ;
+      Uz = 0.0 ;
+      Theta_x = 0.0 ;
+      Theta_y = 0.0 ;
+      Theta_z = 0.0 ;
+   </Gauche>
+   <Droite>
+
+   </Droite>
+</LIMITES>
+
+<CHARGEMENT> #efforts sur la poutre
+   <Gauche> #effort ponctuel à gauche
+
+   </Gauche>
+   <Droite> 
+
+   </Droite>
+   <Lineique> #effort linéique
+
+   </Lineique>
+</CHARGEMENT>
+
+</POUTRE>
+
+<Nom Poutre="Barre" >
+
+<DIMENSIONS>
+   Gauche : 0.0 , 0.0 , 0.0 ;#Coordonnées du point de début de la poutre(mm)
+   Droite : 200 , 0.0 , 0.0 ;#Coordonnées du point de fin de la poutre (mm)
+   E = 210000 ;#Module d Young (MPa)
+   Nu = 0.3 ;#Coefficient de Poisson
+   S = B2*H2 ;#Section(mm^2)
+   Iy = B2*H2**3/12 ;#Moment quadratique (mm^4)
+   Iz = H2*B2**3/12 ;
+   Rho = 7800*10**(-9) ; #Masse volumique (kg.mm-3)
+   n = 5 ;#nombre d éléments entre 2 points remarquables de la poutre
+
+</DIMENSIONS>
+
+<LIMITES> #conditions limites en déplacement
+   <Gauche>
+      Ux = 0.0 ;   #pivot
+      Uy = 0.0 ;
+      Uz = 0.0 ;
+      Theta_x = 0.0 ;
+      Theta_y = 0.0 ;
+	  Theta_z = 0.0;
+   </Gauche>
+   <Droite>
+
+   </Droite>
+</LIMITES>
+
+<CHARGEMENT> #efforts sur la poutre
+   <Gauche> #effort ponctuel à gauche
+      Theta_z = 0.0 ;
+   </Gauche>
+   <Droite> 
+
+   </Droite>
+   <Lineique> #effort linéique
+
+   </Lineique>
+</CHARGEMENT>
+
+</POUTRE>
+
+<LINK>
+
+ Beam1 = Ressort ; #1st beam
+ X = 4000 ; #curvilign absciss on beam 1
+ Beam2 = Barre ; #2nd beam
+ X = 200 ;
+ Type = enca ;
+ Axis = x ;
+ System = global ;
+
+</LINK>
+
+<SOLVEUR>
+
+   Type = statique;
+   n_iter = 10 ;
+   Nom_sortie = ressortNL;
+
+   <SORTIE>
+       Poutre = Ressort ;
+       U = Uy ;
+       F =  ;
+   </SORTIE>
+
+   <SORTIE_AFFI>
+      Poutre = Ressort ;
+      Coord = X Y Z ;
+      U = ;
+      F = ;
+   </SORTIE_AFFI>
+   
+</SOLVEUR>
+
+<PARAMETRES>
+
+   Th1 = 6*3.1415926535 ;
+   R0 = 200-6*3.1415926535*5;
+   R1 = 5;
+   B1 = 5;
+   H1 = 1;
+   B2 = 10;
+   H2 = 10;
+
+</PARAMETRES>

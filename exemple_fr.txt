@@ -1,0 +1,54 @@
+<Nom Poutre="Poutre1" >
+
+<DIMENSIONS>
+   Gauche : 0.0 , 0.0 , 0.0 ;#Coordonnées du point de début de la poutre(m)
+   Droite : 0.3 , 0.0 , 0.0 ;#Coordonnées du point de fin de la poutre (m)
+   E = 210000000000.0 ;#Module d Young (Pa)
+   Nu = 0.3 ;#Coefficient de Poisson
+   S = 0.005 ;#Section(m^2)
+   Iy = 0.000000000002 ;#Moment quadratique (m^4)
+   Iz = 0.000000000002 ;
+   Rho = 7800 ; #Masse volumique (kg.m-3)
+   n = 4 ;#nombre d éléments entre 2 points remarquables de la poutre
+</DIMENSIONS>
+
+<LIMITES> #conditions limites en déplacement
+   <Gauche>
+
+   </Gauche>
+   <Droite>
+      Ux = 0.0 ;   #totalement encastré
+      Uy = 0.0 ;
+      Uz = 0.0 ;
+      Theta_x = 0.0 ;
+      Theta_y = 0.0 ;
+      Theta_z = 0.0 ;
+   </Droite>
+</LIMITES>
+
+<CHARGEMENT> #efforts sur la poutre
+   <Gauche> #effort ponctuel à gauche
+
+   </Gauche>
+   <Droite> 
+
+   </Droite>
+   <Lineique> #effort linéique
+      fy = 1.0 ;
+   </Lineique>
+</CHARGEMENT>
+
+</POUTRE>
+
+<SOLVEUR>
+
+   Type = statique;
+   Nom_sortie = resultat;
+
+   <SORTIE>
+       Poutre = Poutre1 ;
+       U = Ux Uy Uz Theta_x Theta_y Theta_z ;
+       F = Ux ;
+   </SORTIE>
+
+</SOLVEUR>

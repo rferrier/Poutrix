@@ -16,9 +16,9 @@ from tkinter import *
 import os as os
 
 #internal importation :
-from solveur_poutres_v4_4 import *
-from parser_pout_v2 import parser
-from assembly_v2 import *
+from solveur_poutres_v6 import *
+from parser_pout_v2_2 import parser
+from assembly_v3_1 import *
     
 class ScrolledCanvas(Frame):
     
@@ -47,27 +47,60 @@ class MainWindow(Tk):
     def __init__(self):
         Tk.__init__(self)
         
+        Label(self,text="Choisir le fichier à ouvrir").pack(side=TOP)
+        Button(self,text="actualiser avec le filtre txt",command = lambda txt=1 : self.actxt(txt,self.curDir)).pack()
+        Button(self,text="actualiser sans le filtre txt",command = lambda txt=0 : self.actxt(txt,self.curDir)).pack()
+        Button(self,text="retour au dossier de base",command = self.back).pack()
+
         #current directory :
-        curDir = os.path.dirname(os.path.abspath(__file__))
+        self.curDir = os.path.dirname(os.path.abspath(__file__))
+        self.actxt(0,self.curDir)
+
+    def start(self,chcar):
+        try :
+            #trying if it is an openable folder
+            self.curDir1 = self.curDir + "\\" + chcar
+            self.actxt(0,self.curDir1)
+            self.curDir = self.curDir1
+            
+        except :
+            chcar1 = self.curDir + "\\" + chcar
+            self.reader = Reader(chcar1)
+            
+    def back(self):
+        self.curDir = os.path.dirname(os.path.abspath(__file__))
+        self.actxt(0,self.curDir)
+    
+    def actxt(self,txt,chcar):
+        curDir = chcar
         listDir = os.listdir(curDir)
-        
-        ButtonZone = ScrolledCanvas(self,500,300,(-200,0,200,20*len(curDir)))
-        ButtonZone.pack(expand=YES,fill=BOTH,padx=6,pady=6)
-        self.can = ButtonZone.can
+        if txt == 0:
+            self.listDir = listDir
+        else :
+            self.listDir = []
+            for i in listDir:
+                if len(i) > 3:
+                    if i[-4]+i[-3]+i[-2]+i[-1] == ".txt":
+                        self.listDir.append(i)
+
+        try :
+            self.ButtonZone.destroy()
+        except :
+            pass
+        #rebuilding of the buttons
+        self.ButtonZone = ScrolledCanvas(self,500,300,(-200,0,200,40*len(self.listDir)))
+        self.ButtonZone.pack(expand=YES,fill=BOTH,padx=6,pady=6)
+        self.can = self.ButtonZone.can
         
         #buttons
         self.bu = []
         self.fb = []
 
-        for i in range(len(listDir)):
-            chcar = listDir[i]
+        for i in range(len(self.listDir)):
+            chcar = self.listDir[i]
 
             self.bu.append(Button(text=chcar,command = lambda chcar=chcar : self.start(chcar)))
             self.fb.append(self.can.create_window(0,30*i+20,window=self.bu[i]))
-
-    def start(self,chcar):
-
-        self.reader = Reader(chcar)
 
 A = MainWindow()
 A.title('  Poutrix')
