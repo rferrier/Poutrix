@@ -2,14 +2,21 @@
 
 <DIMENSIONS>
    Left : 0.0 , 0.0 , 0.0 ;#Coords of the beginning of the beam (m)
-   Right : 0.3 , 0.0 , 0.0 ;#Coords of the end of the beam (m)
-   E = 210000000000.0 ;#Young modulus (Pa)
+   Right : L1 , 0.0 , 0.0 ;#Coords of the end of the beam (m)
+   E = 210*10**9 ;#Young modulus (Pa)
    Nu = 0.3 ;#Fish coefficient
    S = 0.005 ;#Section(m^2)
    Iy = 0.000000000002 ;#Quadratic moment (m^4)
    Iz = 0.000000000002 ;#Quadratic moment (m^4)
    Rho = 7800 ; #Volumic mass (kg.m-3)
-   n = 30 ;#nb of elements between 2 sides of the beam
+   n = 100 ;#nb of elements between 2 sides of the beam
+
+   <Init_defo>
+      #Ux = -X;
+      Uy = mh.sqrt(L1**2-X**2+0.000000000001) ; #circle
+	  #Uz = X ;
+   </Init_defo>
+
 </DIMENSIONS>
 
 <BOUNDARIES> #boundaries conditions for displacement
@@ -31,10 +38,10 @@
 
    </Left>
    <Right> #ponctual effort on the right
-
+      Uy = 1.0 ;
    </Right>
    <Lineic> #Lineic effort
-      fy = 1 ;
+      #fy = 1.0 ;
    </Lineic>
 </LOADING>
 
@@ -42,21 +49,29 @@
 
 <SOLVER>
 
-   Type = dynamic ;
-   T = 2 ;
-   dt = 0.01 ;
-   Output_name = dynamic;
+   Type = static;
+   Output_name = ressort;
 
-   <TIME_OUTPUT>
+   #<OUTPUT>
+    #   Beam = Poutre1 ;
+     #  U = Ux Uy Theta_z ;
+      # F = Ux Uy Theta_z ;
+   #</OUTPUT>
+
+   <PLOT_OUTPUT>
       Beam = Poutre1 ;
-      X = 0.3 ;
-      Component = Uy ;
-   </TIME_OUTPUT>
-   
-   <TIME_OUTPUT>
-      Beam = Poutre1 ;
-      X = 0.2 ;
-      Component = Uy ;
-   </TIME_OUTPUT>
+      Coord = X Y Z ;
+      U = ;
+      F = ;
+   </PLOT_OUTPUT>
 
 </SOLVER>
+
+<PARAMETERS>
+
+Th1 = 4*3.14159 ;
+R0 = 0.1;
+R1 = 0.02;
+L1 = 0.3;
+
+</PARAMETERS>

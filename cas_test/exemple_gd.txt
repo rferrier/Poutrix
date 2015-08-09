@@ -1,0 +1,58 @@
+<Beam Name="Poutre1" >
+
+<DIMENSIONS>
+   Left : 0.0 , 0.0 , 0.0 ;#Coords of the beginning of the beam (mm)
+   Right : L1 , 0.0 , 0.0 ;#Coords of the end of the beam (mm)
+   E = 210000 ;#Young modulus (MPa)
+   Nu = 0.3 ;#Fish coefficient
+   S = B1*H1 ;#Section(mm^2)
+   Iy = H1*B1**3/12 ;#Quadratic moment (mm^4)
+   Iz = B1*H1**3/12 ;#Quadratic moment (mm^4)
+   Rho = 7.8*10**(-6) ; #Volumic mass (kg.mm-3)
+   n = 100 ;#nb of elements between 2 sides of the beam
+
+</DIMENSIONS>
+
+<BOUNDARIES> #boundaries conditions for displacement
+   <Left>
+      Ux = 0.0 ;   #totally encastred
+      Uy = 0.0 ;
+      Uz = 0.0 ;
+      Theta_x = 0.0 ; #0.0 + 0.0 = the head of toto
+      Theta_y = 0.0 ;
+      Theta_z = 0.0 ;
+   </Left>
+   <Right>
+
+   </Right>
+</BOUNDARIES>
+
+<LOADING> #efforts on the beam
+   <Right> #ponctual effort on the right
+      Uy = 1.0 ;
+   </Right>
+</LOADING>
+
+</BEAM>
+
+<SOLVER>
+
+   Type = staticGD;
+   n_iter = 20 ;
+   Output_name = grand_dep;
+
+   <OUTPUT>
+       Beam = Poutre1 ;
+       U = Ux Uy Theta_z ;
+       F = Ux Uy Theta_z ;
+   </OUTPUT>
+
+</SOLVER>
+
+<PARAMETERS>
+
+L1 = 100 ;
+B1 = 1.;
+H1 = 3.0 ;
+
+</PARAMETERS>

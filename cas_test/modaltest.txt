@@ -1,20 +1,16 @@
 <Beam Name="Poutre1" >
 
 <DIMENSIONS>
-   Left : 0.0 , 0.0 , 0.0 ;#Coords of the beginning of the beam (mm)
-   Right : L1 , 0.0 , 0.0 ;#Coords of the end of the beam (mm)
-   E = 210000 ;#Young modulus (MPa)
+   Left : 0.0 , 0.0 , 0.0 ;#Coords of the beginning of the beam (m)
+   Right : 0.3 , 0.0 , 0.0 ;#Coords of the end of the beam (m)
+   E = 210000000000.0 ;#Young modulus (Pa)
    Nu = 0.3 ;#Fish coefficient
-   S = B1*H1 ;#Section(mm^2)
-   Iy = H1*B1**3/12 ;#Quadratic moment (mm^4)
-   Iz = B1*H1**3/12 ;#Quadratic moment (mm^4)
-   Rho = 7.8*10**(-6) ; #Volumic mass (kg.mm-3)
+   S = 0.005 ;#Section(m^2)
+   Iy = 0.000000000002 ;#Quadratic moment (m^4)
+   Iz = 0.000000000002 ;#Quadratic moment (m^4)
+   Rho = 7800 ; #Volumic mass (kg.m-3)
    n = 100 ;#nb of elements between 2 sides of the beam
-
-   <Init_defo>
-      Uy = 0.001*mh.sin(X/L1) ;
-   </Init_defo>
-
+   # omega1 = 3.53/L**2*sqrt(E*I/(rho*S)) = 4.07
 </DIMENSIONS>
 
 <BOUNDARIES> #boundaries conditions for displacement
@@ -36,7 +32,7 @@
 
    </Left>
    <Right> #ponctual effort on the right
-      Ux = -0.9*F1 ;
+
    </Right>
    <Lineic> #Lineic effort
 
@@ -47,23 +43,13 @@
 
 <SOLVER>
 
-   Type = staticGD;
-   n_iter = 100 ;
-   Output_name = grand_dep;
+   Type = modal 4 ;
+   Output_name = modal;
 
    <OUTPUT>
        Beam = Poutre1 ;
-       U = Ux Uy Theta_z ;
-       F = Ux Uy Theta_z ;
+       U = Uz ;
+       F = ;
    </OUTPUT>
 
 </SOLVER>
-
-<PARAMETERS>
-
-L1 = 100 ;
-B1 = 1.;
-H1 = 3.0 ;
-F1 = 3.14159**2*210000*B1*H1**3/12/(4*L1**2) ; #117N
-
-</PARAMETERS>

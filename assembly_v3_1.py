@@ -8,9 +8,11 @@ from parser_pout_v2_2 import parser
 #External importations
 import numpy as np
 from scipy.linalg import *
+#import scipy.sparse as ssp
 import sp
 import math as mh
 import os as os
+#import time as tm
 
 class Reader :
     #assembly data-process facility
@@ -103,7 +105,6 @@ class Reader :
         
         self.assemlist = [self.beamlist,self.linklist]
         #print(self.assemlist)
-        #launching the calculus...
 
     def solve(self,data):
 
@@ -198,7 +199,7 @@ class Reader :
                 self.outChaine = self.outChaine + '\n' + 'MODE ' + str(i+1) + '\n' + '\omega = ' + str(abs(a)**(1/2)) + '\n'
                 
                 #extracting the good column in the matrix :
-                vector = mat([[0]]*len(self.solv.u))
+                vector = np.mat([[0]]*len(self.solv.u))
                 vector[indice,0] = 1
                 self.u = self.solv.u*vector
                 
@@ -260,8 +261,6 @@ class Reader :
             
             for ti in range(len(u)) : #time
                 i.u.append(u[ti][j:j+6*len(i.elements)+6])
-                self.solv.microsolv[i1].mesh.compute_F1(i.u[ti])
-                i.f.append(self.solv.microsolv[i1].mesh.F1)
                 
                 #Separating components
                 
@@ -271,8 +270,12 @@ class Reader :
                         i.v[ti][k].append(i.u[ti][6*k2+k][0])
                         
                 i.t.append([[],[],[],[],[],[]])
+                self.solv.microsolv[i1].mesh.compute_T(i.u[ti])
+                i.f.append(self.solv.microsolv[i1].mesh.T)
+                #print(self.solv.microsolv[i1].mesh.T)
+                
                 for k in range(6):
-                    for k2 in range(int(len(i.f[ti])/6)):
+                    for k2 in range(int(len(i.u[ti])/6)):
                         i.t[ti][k].append(i.f[ti][6*k2+k][0])
                         
             j = j + 6*len(i.elements) + 6
@@ -382,8 +385,8 @@ class Reader :
                     for i1 in range(len(self.solr.postProVI[self.beamName1[alpha]])) : #We take only the specified components
                         i = self.solr.postProVI[self.beamName1[alpha]][i1] #the n° of the component
                         
-                        #j = k.t[time][i][j1]
-                        j = 'sorry:not_implemented'
+                        j = k.t[time][i][j1]
+                        #j = 'sorry:not_implemented'
                         if type(j) == np.matrix :
                             self.outChaine = self.outChaine + str(abs(j[0,0])) + ';'
                         else :
@@ -506,28 +509,37 @@ class BeamR :
         self.txd = self.input[2][1][3]
         self.tyd = self.input[2][1][4]
         self.tzd = self.input[2][1][5]
+        
+        if len(self.input[3][0]) == 0 :  #manage the possiblilty of empty data
+            [self.fxg, self.fyg, self.fzg, self.mxg, self.myg, self.mzg] = ['0.','0.','0.','0.','0.','0.']
+        else :
+            self.fxg = self.input[3][0][0][0]
+            self.fyg = self.input[3][0][0][1]
+            self.fzg = self.input[3][0][0][2]
+            self.mxg = self.input[3][0][0][3]
+            self.myg = self.input[3][0][0][4]
+            self.mzg = self.input[3][0][0][5]
 
-        self.fxg = self.input[3][0][0]
-        self.fyg = self.input[3][0][1]
-        self.fzg = self.input[3][0][2]
-        self.mxg = self.input[3][0][3]
-        self.myg = self.input[3][0][4]
-        self.mzg = self.input[3][0][5]
-
-        self.fxd = self.input[3][1][0]
-        self.fyd = self.input[3][1][1]
-        self.fzd = self.input[3][1][2]
-        self.mxd = self.input[3][1][3]
-        self.myd = self.input[3][1][4]
-        self.mzd = self.input[3][1][5]
+        if len(self.input[3][1]) == 0 :
+            [self.fxd, self.fyd, self.fzd, self.mxd, self.myd, self.mzd] = ['0.','0.','0.','0.','0.','0.']
+        else :
+            self.fxd = self.input[3][1][0][0]
+            self.fyd = self.input[3][1][0][1]
+            self.fzd = self.input[3][1][0][2]
+            self.mxd = self.input[3][1][0][3]
+            self.myd = self.input[3][1][0][4]
+            self.mzd = self.input[3][1][0][5]
 
         #lineic efforts
-        self.fx = self.input[3][2][0]
-        self.fy = self.input[3][2][1]
-        self.fz = self.input[3][2][2]
-        self.mx = self.input[3][2][3]
-        self.my = self.input[3][2][4]
-        self.mz = self.input[3][2][5]
+        if len(self.input[3][2]) == 0 :
+            [self.fx, self.fy, self.fz, self.mx, self.my, self.mz] = ['0.','0.','0.','0.','0.','0.']
+        else : 
+            self.fx = self.input[3][2][0][0]
+            self.fy = self.input[3][2][0][1]
+            self.fz = self.input[3][2][0][2]
+            self.mx = self.input[3][2][0][3]
+            self.my = self.input[3][2][0][4]
+            self.mz = self.input[3][2][0][5]
 
         self.list_char_mieux1 = [0]*6
         self.list_char = [self.fx,self.fy,self.fz,self.mx,self.my,self.mz]
@@ -719,7 +731,7 @@ class BeamR :
         for i in range(len(self.list_char)) :
             if len(self.list_char[i]) == 0:
                 #free
-                self.output[0][i] = 1
+                self.output[0][i] = 'free'
             else :
                 self.output[0][i] = eval(self.list_char[i][0])
 
@@ -780,7 +792,7 @@ class BeamR :
         for i in range(len(self.list_char)) :
             if len(self.list_char[i]) == 0:
                 #free
-                self.output[len(self.elements)+2][i] = 1
+                self.output[len(self.elements)+2][i] = 'free'
             else :
                 self.output[len(self.elements)+2][i] = eval(self.list_char[i][0])
         
@@ -964,15 +976,14 @@ class Assembly_solv :
     def static_solv(self):
         self.compute_mat()
         self.compute_leng()
-
         self.assembly_A()
         self.compute_pen()
 
         for i in self.links:
             i.compute_matrix()
         self.assembly_b()
-
         self.u = solve(self.A,self.b,sym_pos = True)
+        #self.u = ssp.linalg.spsolve(ssp.csr_matrix(self.A),ssp.csr_matrix(self.b))
         
     def modal_solv(self):
         self.compute_mat()
@@ -1045,32 +1056,35 @@ class Assembly_solv :
         self.A = np.mat([[0.]*self.leng]*self.leng)
         s = 0
         for i in range(len(self.microsolv)):
-            for ii in range(len(self.microsolv[i].mesh.A)):
-                for jj in range(len(self.microsolv[i].mesh.A)):
-                    self.A[s+ii,s+jj] = self.microsolv[i].mesh.A[ii,jj]
+            long = len(self.microsolv[i].mesh.A)
+            self.A[s:s+long,s:s+long] = self.microsolv[i].mesh.A
+            """for ii in range(long):
+                for jj in range(long):
+                    self.A[s+ii,s+jj] = self.microsolv[i].mesh.A[ii,jj]"""
 
-            s = s + len(self.microsolv[i].mesh.A)
-            
+            s = s + long
+
     def assembly_M(self):
 
         self.M = np.mat([[0.]*self.leng]*self.leng)
         s = 0
         for i in range(len(self.microsolv)):
-            for ii in range(len(self.microsolv[i].mesh.M)):
-                for jj in range(len(self.microsolv[i].mesh.M)):
-                    self.M[s+ii,s+jj] = self.microsolv[i].mesh.M[ii,jj]
+            long = len(self.microsolv[i].mesh.M)
+            self.M[s:s+long,s:s+long] = self.microsolv[i].mesh.M
 
-            s = s + len(self.microsolv[i].mesh.M)
+            s = s + long
 
     def assembly_b(self):
 
         self.b = np.mat([[0.]]*self.leng)
         s = 0
         for i in range(len(self.microsolv)):
-            for ii in range(len(self.microsolv[i].mesh.b)):
-                self.b[s+ii,0] = self.microsolv[i].mesh.b[ii,0]
+            long = len(self.microsolv[i].mesh.b)
+            self.b[s:s+long,0] = self.microsolv[i].mesh.b
+            """for ii in range(long):
+                self.b[s+ii,0] = self.microsolv[i].mesh.b[ii,0]"""
 
-            s = s + len(self.microsolv[i].mesh.b)
+            s = s + long
 
 class Link:
     #Basic class for links
@@ -1328,6 +1342,6 @@ def compute_mat_zyx(th3,th2,th1):
 
 
 if __name__ == "__main__":
-    B = Reader("ressorts//ressort_berx1.txt")
-    #B = Reader("dynatest.txt")
+    B = Reader("cas_test//modaltest.txt")
+    #B = Reader("assembly2.txt")
 #print(B.v)

@@ -151,7 +151,7 @@ def parser():
         
         blocBoundaries|=baliseDebutBoundaries & blocLeft & blocRight & baliseFinBoundaries
         blocDimensions|=baliseDebutDimensions & blocCoL & blocCoR & blocE & blocNu & blocS & blocIy & blocIz & blocRho & blocNb & blocInDef[0:1] & baliseFinDimensions
-        blocLoading|=baliseDebutLoading & blocLeft & blocRight & blocLineic & baliseFinLoading
+        blocLoading|=baliseDebutLoading & blocLeft[0:1] & blocRight[0:1] & blocLineic[0:1] & baliseFinLoading
         blocSolveur|=baliseDebutSolveur & blocSolve & blocDur[0:1] & blocTech[0:1] & blocNiter[0:1] & blocName & blocOutput[0:] & blocOutDyn[0:] & blocOutPlot[0:] & baliseFinSolveur
         blocOutput|=baliseDebutOutput & blocBNam & blocU & blocF & baliseFinOutput
         blocOutDyn|=baliseDebutOutDyn & blocBNam & blocx & blocComp & baliseFinOutDyn
@@ -270,9 +270,6 @@ Ux = 0.0 ;
 Uy = 0.0 ;
 Theta_x = 0.0 ;
 </Left>
-<Right> #ponctual effort on the right
-Theta_z = 0.0 ;
-</Right>
 <Lineic> #Lineic effort
 fy=-1.0;#Nm-1
 mx = [datamx];

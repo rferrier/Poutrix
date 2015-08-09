@@ -27,12 +27,6 @@
 </LIMITES>
 
 <CHARGEMENT> #efforts sur la poutre
-   <Gauche> #effort ponctuel à gauche
-
-   </Gauche>
-   <Droite> 
-
-   </Droite>
    <Lineique> #effort linéique
       fy = 1.0 ;
    </Lineique>

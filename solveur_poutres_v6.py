@@ -82,8 +82,8 @@ class Mesh :
     def create_elements(self):
 
         #Re-writing of the bundaries
-        self.left.extend([1,1,1,1,1,1])
-        self.right2 = [1,1,1,1,1,1]
+        self.left.extend(['free','free','free','free','free','free'])
+        self.right2 = ['free','free','free','free','free','free']
         self.right2.extend(self.right)
         
         #the bundaries :
@@ -141,6 +141,23 @@ class Mesh :
             for j in range(12):
                 self.F1[12*i+j,0] = self.foelem[i].Fe[j,0]
         #print(self.F1)
+
+    def compute_T(self,U):
+        """This function builds the vector of nodal forces"""
+        self.T = np.mat([[0.]]*6*len(self.nodes))
+        #rebuilding of boundaries elem
+        self.foelem = self.elements[:]
+        self.foelem[0] = Reg_Element(self.data[0][1],0,[0,1],self)
+        self.foelem[self.numberOfLastElem] = Reg_Element(self.data[self.numberOfLastElem][1],self.numberOfLastElem,[self.numberOfLastElem,self.numberOfLastElem+1],self)
+        
+        for i in range(len(self.foelem)):
+            Ui = np.mat([[U[6*i,0]],[U[6*i+1,0]],[U[6*i+2,0]],[U[6*i+3,0]],[U[6*i+4,0]],[U[6*i+5,0]],[U[6*i+6,0]],[U[6*i+7,0]],[U[6*i+8,0]],[U[6*i+9,0]],[U[6*i+10,0]],[U[6*i+11,0]]])          
+            self.foelem[i].compute_Fe(Ui)
+        
+        for k in range(len(self.nodes)):
+            self.nodes[k].compute_T()
+            
+            self.T[k*6:(k+1)*6,0] = self.nodes[k].T
 
     def compute_M(self):
 
@@ -200,6 +217,20 @@ class Node :
             self.z = self.parent.origin[2]
             
         self.coords = (self.x,self.y,self.z)
+        
+    def compute_T(self):
+        """This function computes the strength seen at the node"""
+        
+        long = len(self.parent.nodes)
+
+        if self.number != 0 and self.number != long-1 : #reg element
+            forcelem = self.parent.foelem[0].Fe
+            self.T = (forcelem[-6:len(forcelem),0] - self.parent.foelem[self.number].Fe[0:6,0])/2
+        elif self.number == 0 :
+            self.T = -self.parent.foelem[0].Fe[0:6,0]
+        else : #self.number = long-1
+            forcelem = self.parent.foelem[long-2].Fe
+            self.T = forcelem[-6:len(forcelem),0]
 
 class Element :
     #base class for elements
@@ -303,7 +334,7 @@ class Sing_Element(Element) :
         self.Keloc = np.mat([[ES/h,0,0,0,0,0,-ES/h,0,0,0,0,0],[0,12*EIy/h/h/h,0,0,0,6*EIy/h/h,0,- 12*EIy/h/h/h,0,0,0,6*EIy/h/h],[0,0,12*EIz/h/h/h,0,-6*EIz/h/h,0,0,0,- 12*EIz/h/h/h,0,-6*EIz/h/h,0],[0,0,0,GJ/h,0,0,0,0,0,-GJ/h,0,0],[0,0,-6*EIz/h/h,0,4*EIz/h,0,0,0,6*EIz/h/h,0,2*EIz/h,0],[0,6*EIy/h/h,0,0,0,4*EIy/h,0,- 6*EIy/h/h,0,0,0,2*EIy/h],[-ES/h,0,0,0,0,0,ES/h,0,0,0,0,0],[0,- 12*EIy/h/h/h,0,0,0,- 6*EIy/h/h,0,12*EIy/h/h/h,0,0,0,- 6*EIy/h/h],[0,0,- 12*EIz/h/h/h,0,6*EIz/h/h,0,0,0,12*EIz/h/h/h,0,6*EIz/h/h,0],[0,0,0,-GJ/h,0,0,0,0,0,GJ/h,0,0],[0,0,-6*EIz/h/h,0,2*EIz/h,0,0,0,6*EIz/h/h,0,4*EIz/h,0],[0,6*EIy/h/h,0,0,0,2*EIy/h,0,- 6*EIy/h/h,0,0,0,4*EIy/h]])
         #removing of the forbitten movements with the penalization method
         for i in range(12):
-            if type(self.compo[i]) == float:
+            if type(self.compo[i]) != str:
                 self.Keloc[i,i] = self.Keloc[i,i] + self.pen[i]
         
         self.Ke = self.pas1 * self.Keloc * self.pas
@@ -331,6 +362,6 @@ class Sing_Element(Element) :
 
         #removing of the forbitten movements
         for i in range(12):
-            if type(self.compo[i]) == float:
+            if type(self.compo[i]) != str:
                 self.be[i] = self.be[i] + self.pen[i]*self.compo[i]
                 
